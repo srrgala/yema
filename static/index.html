@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brief Generator — Branding Strategy Tool</title>
+  <style>
+    /* ── Reset & base ────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:      #0f172a;
+      --navy-mid:  #1e293b;
+      --indigo:    #4f46e5;
+      --indigo-lt: #6366f1;
+      --indigo-bg: #eef2ff;
+      --green:     #059669;
+      --green-bg:  #ecfdf5;
+      --amber:     #d97706;
+      --amber-bg:  #fffbeb;
+      --red:       #dc2626;
+      --red-bg:    #fef2f2;
+      --gray-50:   #f8fafc;
+      --gray-100:  #f1f5f9;
+      --gray-200:  #e2e8f0;
+      --gray-400:  #94a3b8;
+      --gray-500:  #64748b;
+      --gray-700:  #334155;
+      --gray-900:  #0f172a;
+      --radius:    10px;
+      --shadow:    0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.05);
+      --shadow-lg: 0 4px 16px rgba(0,0,0,.10), 0 12px 32px rgba(0,0,0,.06);
+    }
+
+    html { font-size: 16px; scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                   "Helvetica Neue", Arial, sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-900);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Header ──────────────────────────────────────────────────────────── */
+    .header {
+      background: var(--navy);
+      color: #fff;
+      padding: 1.5rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .header-logo {
+      width: 40px; height: 40px;
+      background: var(--indigo);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.25rem; font-weight: 800; color: #fff;
+      flex-shrink: 0;
+    }
+
+    .header-text h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -.02em;
+    }
+
+    .header-text p {
+      font-size: .8rem;
+      color: #94a3b8;
+      margin-top: .15rem;
+    }
+
+    /* ── Layout ──────────────────────────────────────────────────────────── */
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* ── Step indicator ──────────────────────────────────────────────────── */
+    .steps {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      font-size: .8rem;
+    }
+
+    .step {
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      color: var(--gray-400);
+      font-weight: 500;
+    }
+
+    .step.active  { color: var(--indigo); }
+    .step.done    { color: var(--green); }
+
+    .step-dot {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .7rem; font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .step.done .step-dot {
+      background: var(--green); border-color: var(--green); color: #fff;
+    }
+    .step.active .step-dot {
+      background: var(--indigo); border-color: var(--indigo); color: #fff;
+    }
+
+    .step-connector {
+      flex: 1;
+      height: 2px;
+      background: var(--gray-200);
+      border-radius: 1px;
+    }
+    .step-connector.done { background: var(--green); }
+
+    /* ── Card ────────────────────────────────────────────────────────────── */
+    .card {
+      background: #fff;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--navy-mid);
+      margin-bottom: .35rem;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+
+    .card-subtitle {
+      font-size: .85rem;
+      color: var(--gray-500);
+      margin-bottom: 1.25rem;
+    }
+
+    /* ── Textarea ────────────────────────────────────────────────────────── */
+    textarea {
+      width: 100%;
+      min-height: 180px;
+      padding: .875rem 1rem;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: .9rem;
+      color: var(--gray-900);
+      line-height: 1.6;
+      resize: vertical;
+      transition: border-color .15s, box-shadow .15s;
+      background: var(--gray-50);
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--indigo);
+      box-shadow: 0 0 0 3px rgba(79,70,229,.12);
+      background: #fff;
+    }
+
+    textarea::placeholder { color: var(--gray-400); }
+
+    .word-count {
+      font-size: .75rem;
+      color: var(--gray-400);
+      text-align: right;
+      margin-top: .35rem;
+    }
+
+    .word-count.warn { color: var(--amber); }
+    .word-count.ok   { color: var(--green); }
+
+    /* ── Buttons ─────────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .625rem 1.25rem;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, transform .1s, box-shadow .15s;
+    }
+
+    .btn:active { transform: translateY(1px); }
+
+    .btn-primary {
+      background: var(--indigo);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(79,70,229,.25);
+    }
+    .btn-primary:hover { background: var(--indigo-lt); }
+    .btn-primary:disabled {
+      background: var(--gray-400);
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: var(--gray-100);
+      color: var(--gray-700);
+      border: 1px solid var(--gray-200);
+    }
+    .btn-secondary:hover { background: var(--gray-200); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--indigo);
+      padding: .4rem .75rem;
+      font-size: .8rem;
+    }
+    .btn-ghost:hover { background: var(--indigo-bg); }
+
+    .action-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+      gap: .75rem;
+    }
+
+    /* ── Notice / alert ──────────────────────────────────────────────────── */
+    .notice {
+      display: flex;
+      gap: .75rem;
+      padding: .875rem 1rem;
+      border-radius: 8px;
+      font-size: .875rem;
+      line-height: 1.5;
+    }
+
+    .notice-icon { font-size: 1rem; flex-shrink: 0; }
+
+    .notice-error   { background: var(--red-bg);   color: #991b1b; border: 1px solid #fecaca; }
+    .notice-warning { background: var(--amber-bg);  color: #92400e; border: 1px solid #fde68a; }
+    .notice-info    { background: var(--indigo-bg); color: #3730a3; border: 1px solid #c7d2fe; }
+    .notice-success { background: var(--green-bg);  color: #065f46; border: 1px solid #a7f3d0; }
+
+    /* ── Loading spinner ─────────────────────────────────────────────────── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2.5px solid rgba(255,255,255,.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    .spinner-dark {
+      border-color: rgba(79,70,229,.25);
+      border-top-color: var(--indigo);
+    }
+
+    /* ── Questions ───────────────────────────────────────────────────────── */
+    .question-item {
+      margin-bottom: 1.25rem;
+    }
+
+    .question-label {
+      font-size: .875rem;
+      font-weight: 600;
+      color: var(--navy-mid);
+      margin-bottom: .4rem;
+      display: flex;
+      align-items: flex-start;
+      gap: .5rem;
+    }
+
+    .question-num {
+      min-width: 22px; height: 22px;
+      background: var(--indigo);
+      color: #fff;
+      border-radius: 50%;
+      font-size: .7rem;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      margin-top: .05rem;
+    }
+
+    .question-item textarea {
+      min-height: 80px;
+    }
+
+    /* ── Brief output ────────────────────────────────────────────────────── */
+    .brief-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: .75rem;
+    }
+
+    .brief-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--navy-mid);
+    }
+
+    .brief-subtitle {
+      font-size: .8rem;
+      color: var(--gray-500);
+      margin-top: .15rem;
+    }
+
+    .brief-field {
+      padding: 1.25rem 0;
+      border-bottom: 1px solid var(--gray-100);
+    }
+
+    .brief-field:last-child { border-bottom: none; }
+
+    .field-heading {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      margin-bottom: .625rem;
+    }
+
+    .field-num {
+      font-size: .7rem;
+      font-weight: 700;
+      color: var(--indigo);
+      background: var(--indigo-bg);
+      padding: .15rem .45rem;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .field-name {
+      font-size: .9rem;
+      font-weight: 700;
+      color: var(--navy-mid);
+    }
+
+    .field-content {
+      font-size: .875rem;
+      color: var(--gray-700);
+      line-height: 1.7;
+      white-space: pre-wrap;
+    }
+
+    /* Badge for inferred / missing */
+    .badge {
+      display: inline-block;
+      padding: .15rem .5rem;
+      border-radius: 4px;
+      font-size: .72rem;
+      font-weight: 600;
+      margin-top: .5rem;
+    }
+
+    .badge-inferred {
+      background: var(--amber-bg);
+      color: #92400e;
+      border: 1px solid #fde68a;
+    }
+
+    .badge-missing {
+      background: var(--gray-100);
+      color: var(--gray-500);
+      border: 1px solid var(--gray-200);
+      font-style: italic;
+    }
+
+    /* ── Utility ─────────────────────────────────────────────────────────── */
+    .hidden { display: none !important; }
+
+    .divider {
+      height: 1px;
+      background: var(--gray-200);
+      margin: 1.25rem 0;
+    }
+
+    @media (max-width: 600px) {
+      .container { padding: 1rem 1rem 3rem; }
+      .card { padding: 1.25rem; }
+      .header { padding: 1.25rem 1rem; }
+      .steps { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ───────────────────────────────────────────────────────────── -->
+<header class="header">
+  <div class="header-logo">B</div>
+  <div class="header-text">
+    <h1>Brief Generator</h1>
+    <p>Convierte el caos del cliente en estrategia accionable</p>
+  </div>
+</header>
+
+<!-- ── Main ─────────────────────────────────────────────────────────────── -->
+<main class="container">
+
+  <!-- Step indicator -->
+  <div class="steps" id="steps">
+    <div class="step active" id="step1">
+      <div class="step-dot">1</div>
+      <span>Input</span>
+    </div>
+    <div class="step-connector" id="conn1"></div>
+    <div class="step" id="step2">
+      <div class="step-dot">2</div>
+      <span>Clarificación</span>
+    </div>
+    <div class="step-connector" id="conn2"></div>
+    <div class="step" id="step3">
+      <div class="step-dot">3</div>
+      <span>Brief</span>
+    </div>
+  </div>
+
+  <!-- ── Card 1: Input ──────────────────────────────────────────────────── -->
+  <div class="card" id="input-card">
+    <div class="card-title">
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+      Texto del cliente
+    </div>
+    <p class="card-subtitle">
+      Pega el email, documento o notas del cliente. Cuanto más contexto, mejor.
+    </p>
+
+    <textarea
+      id="client-text"
+      placeholder="Hola, somos Nómada Studio, un colectivo de 4 fotógrafos que llevamos 3 años haciendo proyectos documentales en comunidades rurales de Latinoamérica. Queremos redefinir nuestra marca porque sentimos que no comunica bien quiénes somos ni por qué hacemos lo que hacemos. Nos inspiran marcas como National Geographic o Magnum Photos, queremos algo que transmita compromiso, autenticidad y respeto por las culturas que retratamos..."
+    ></textarea>
+
+    <div class="word-count" id="word-count">0 palabras</div>
+
+    <!-- Error / notice area -->
+    <div class="notice notice-error hidden" id="input-error" role="alert">
+      <span class="notice-icon">⚠</span>
+      <span id="input-error-text"></span>
+    </div>
+
+    <div class="action-row">
+      <span id="input-hint" style="font-size:.8rem;color:var(--gray-400)">
+        Mínimo 20 palabras para procesar
+      </span>
+      <button class="btn btn-primary" id="process-btn">
+        Procesar texto
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Card 2: Clarification ──────────────────────────────────────────── -->
+  <div class="card hidden" id="clarification-card">
+    <div class="card-title">
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      Necesitamos más información
+    </div>
+    <p class="card-subtitle">
+      Faltan datos críticos para generar un brief útil. Responde las siguientes preguntas.
+    </p>
+
+    <div id="questions-container"></div>
+
+    <div class="notice notice-info" style="margin-top:.75rem">
+      <span class="notice-icon">💡</span>
+      <span>Con tus respuestas generaremos el brief completo. No hace falta ser exhaustivo; una o dos frases por pregunta son suficientes.</span>
+    </div>
+
+    <div class="action-row" style="margin-top:1.25rem">
+      <button class="btn btn-secondary" id="back-btn">
+        ← Editar texto
+      </button>
+      <button class="btn btn-primary" id="submit-answers-btn">
+        Generar brief
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Card 3: Brief output ───────────────────────────────────────────── -->
+  <div class="card hidden" id="brief-card">
+    <div class="brief-header">
+      <div>
+        <div class="brief-title">Brief de Branding</div>
+        <div class="brief-subtitle" id="brief-subtitle"></div>
+      </div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <button class="btn btn-secondary" id="reset-btn">
+          Nuevo brief
+        </button>
+        <button class="btn btn-ghost" id="copy-btn">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+          </svg>
+          Copiar
+        </button>
+      </div>
+    </div>
+
+    <div id="brief-content"></div>
+  </div>
+
+</main>
+
+<script>
+  // ── Configuración ─────────────────────────────────────────────────────────
+  // Modifica esta constante si el backend corre en una URL diferente.
+  // Vacío = misma origen (recomendado para producción en Render).
+  const API_URL = "";
+
+  // ── Brief field definitions (orden de display) ────────────────────────────
+  const BRIEF_FIELDS = [
+    { key: "context",              label: "Contexto y antecedentes" },
+    { key: "mission_vision_values",label: "Misión, Visión y Valores" },
+    { key: "objectives",           label: "Objetivos del proyecto" },
+    { key: "target_audience",      label: "Público objetivo (Target y Buyer Persona)" },
+    { key: "competition",          label: "Análisis de la competencia" },
+    { key: "brand_personality",    label: "Personalidad de la marca" },
+    { key: "promise",              label: "Promesa y beneficio principal" },
+    { key: "logistics",            label: "Restricciones y requisitos logísticos" },
+  ];
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  let currentQuestions = [];
+  let currentText = "";
+
+  // ── DOM refs ──────────────────────────────────────────────────────────────
+  const clientText       = document.getElementById("client-text");
+  const wordCount        = document.getElementById("word-count");
+  const inputError       = document.getElementById("input-error");
+  const inputErrorText   = document.getElementById("input-error-text");
+  const processBtn       = document.getElementById("process-btn");
+  const inputCard        = document.getElementById("input-card");
+  const clarCard         = document.getElementById("clarification-card");
+  const questionsEl      = document.getElementById("questions-container");
+  const submitAnswersBtn = document.getElementById("submit-answers-btn");
+  const backBtn          = document.getElementById("back-btn");
+  const briefCard        = document.getElementById("brief-card");
+  const briefContent     = document.getElementById("brief-content");
+  const briefSubtitle    = document.getElementById("brief-subtitle");
+  const copyBtn          = document.getElementById("copy-btn");
+  const resetBtn         = document.getElementById("reset-btn");
+
+  const step1   = document.getElementById("step1");
+  const step2   = document.getElementById("step2");
+  const step3   = document.getElementById("step3");
+  const conn1   = document.getElementById("conn1");
+  const conn2   = document.getElementById("conn2");
+
+  // ── Word counter ──────────────────────────────────────────────────────────
+  clientText.addEventListener("input", () => {
+    const words = clientText.value.trim().split(/\s+/).filter(Boolean).length;
+    wordCount.textContent = `${words} palabra${words !== 1 ? "s" : ""}`;
+    wordCount.className = "word-count" + (words === 0 ? "" : words < 20 ? " warn" : " ok");
+  });
+
+  // ── Steps helper ──────────────────────────────────────────────────────────
+  function setStep(n) {
+    [step1, step2, step3].forEach((s, i) => {
+      s.className = "step" + (i + 1 === n ? " active" : i + 1 < n ? " done" : "");
+      const dot = s.querySelector(".step-dot");
+      dot.textContent = i + 1 < n ? "✓" : String(i + 1);
+    });
+    conn1.className = "step-connector" + (n > 1 ? " done" : "");
+    conn2.className = "step-connector" + (n > 2 ? " done" : "");
+  }
+
+  // ── Error display ─────────────────────────────────────────────────────────
+  function showInputError(msg) {
+    inputErrorText.textContent = msg;
+    inputError.classList.remove("hidden");
+  }
+  function clearInputError() {
+    inputError.classList.add("hidden");
+  }
+
+  // ── Loading state helpers ─────────────────────────────────────────────────
+  function setLoading(btn, loading, label) {
+    if (loading) {
+      btn.disabled = true;
+      btn.innerHTML = `<div class="spinner"></div>${label || "Procesando…"}`;
+    } else {
+      btn.disabled = false;
+    }
+  }
+
+  // ── Phase 1: Process text ─────────────────────────────────────────────────
+  processBtn.addEventListener("click", async () => {
+    clearInputError();
+    const text = clientText.value.trim();
+
+    if (!text) {
+      showInputError("El campo de texto está vacío.");
+      return;
+    }
+
+    currentText = text;
+    setLoading(processBtn, true);
+    processBtn.innerHTML = `<div class="spinner"></div>Analizando…`;
+
+    try {
+      const res = await fetch(`${API_URL}/api/process`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+
+      const data = await res.json();
+      handleProcessResponse(data);
+    } catch (err) {
+      showInputError("Error de conexión. Comprueba que el servidor está activo e inténtalo de nuevo.");
+    } finally {
+      processBtn.disabled = false;
+      processBtn.innerHTML = `Procesar texto
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+        </svg>`;
+    }
+  });
+
+  function handleProcessResponse(data) {
+    switch (data.status) {
+      case "invalid":
+        showInputError(data.message || "Input inválido.");
+        break;
+
+      case "identity":
+        showInputError(renderMarkdownLight(data.message || ""));
+        inputErrorText.innerHTML = renderMarkdownLight(data.message || "");
+        inputError.classList.remove("hidden");
+        inputError.className = "notice notice-info";
+        break;
+
+      case "needs_clarification":
+        currentQuestions = data.questions || [];
+        renderQuestions(currentQuestions);
+        inputCard.classList.add("hidden");
+        clarCard.classList.remove("hidden");
+        briefCard.classList.add("hidden");
+        setStep(2);
+        break;
+
+      case "ready":
+        renderBrief(data.brief, false);
+        inputCard.classList.add("hidden");
+        clarCard.classList.add("hidden");
+        briefCard.classList.remove("hidden");
+        setStep(3);
+        break;
+
+      case "error":
+        showInputError(data.message || "Error interno del servidor.");
+        break;
+
+      default:
+        showInputError("Respuesta inesperada del servidor.");
+    }
+  }
+
+  // ── Phase 2: Clarification ────────────────────────────────────────────────
+  function renderQuestions(questions) {
+    questionsEl.innerHTML = "";
+    questions.forEach((q, i) => {
+      const div = document.createElement("div");
+      div.className = "question-item";
+      div.innerHTML = `
+        <label class="question-label">
+          <span class="question-num">${i + 1}</span>
+          <span>${escapeHtml(q)}</span>
+        </label>
+        <textarea
+          id="answer-${i}"
+          placeholder="Tu respuesta…"
+          rows="3"
+        ></textarea>
+      `;
+      questionsEl.appendChild(div);
+    });
+  }
+
+  backBtn.addEventListener("click", () => {
+    clarCard.classList.add("hidden");
+    inputCard.classList.remove("hidden");
+    setStep(1);
+  });
+
+  submitAnswersBtn.addEventListener("click", async () => {
+    const answers = currentQuestions.map((q, i) => ({
+      question: q,
+      answer: (document.getElementById(`answer-${i}`)?.value || "").trim(),
+    }));
+
+    setLoading(submitAnswersBtn, true);
+    submitAnswersBtn.innerHTML = `<div class="spinner"></div>Generando brief…`;
+
+    try {
+      const res = await fetch(`${API_URL}/api/process`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: currentText, answers }),
+      });
+
+      const data = await res.json();
+
+      if (data.status === "ready") {
+        renderBrief(data.brief, true);
+        clarCard.classList.add("hidden");
+        briefCard.classList.remove("hidden");
+        setStep(3);
+      } else if (data.status === "error") {
+        alert(data.message || "Error al generar el brief.");
+      } else {
+        alert("Respuesta inesperada del servidor.");
+      }
+    } catch (err) {
+      alert("Error de conexión. Inténtalo de nuevo.");
+    } finally {
+      submitAnswersBtn.disabled = false;
+      submitAnswersBtn.innerHTML = `Generar brief
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+        </svg>`;
+    }
+  });
+
+  // ── Phase 3: Brief rendering ──────────────────────────────────────────────
+  function renderBrief(brief, hadClarification) {
+    briefSubtitle.textContent = hadClarification
+      ? "Generado con clarificación activa"
+      : "Generado directamente del texto del cliente";
+
+    briefContent.innerHTML = "";
+
+    BRIEF_FIELDS.forEach((field, idx) => {
+      const raw = brief[field.key] || "(no proporcionado)";
+      const div = document.createElement("div");
+      div.className = "brief-field";
+
+      div.innerHTML = `
+        <div class="field-heading">
+          <span class="field-num">${String(idx + 1).padStart(2, "0")}</span>
+          <span class="field-name">${escapeHtml(field.label)}</span>
+        </div>
+        <div class="field-content">${formatFieldContent(raw)}</div>
+      `;
+
+      briefContent.appendChild(div);
+    });
+  }
+
+  function formatFieldContent(raw) {
+    const INFERRED_MARKER = "(inferido — pendiente de validación)";
+    const MISSING_MARKER  = "(no proporcionado)";
+
+    if (raw.trim() === MISSING_MARKER) {
+      return `<span class="badge badge-missing">No proporcionado</span>`;
+    }
+
+    if (raw.includes(INFERRED_MARKER)) {
+      const body = raw.replace(INFERRED_MARKER, "").trim();
+      return `${escapeHtml(body).replace(/\n/g, "<br>")}<br><span class="badge badge-inferred">Inferido — pendiente de validación</span>`;
+    }
+
+    return escapeHtml(raw).replace(/\n/g, "<br>");
+  }
+
+  // ── Copy brief ────────────────────────────────────────────────────────────
+  copyBtn.addEventListener("click", async () => {
+    const lines = ["BRIEF DE BRANDING", "=".repeat(50), ""];
+
+    BRIEF_FIELDS.forEach((field, idx) => {
+      const el = briefContent.querySelectorAll(".brief-field")[idx];
+      if (!el) return;
+      const content = el.querySelector(".field-content")?.innerText || "";
+      lines.push(`${idx + 1}. ${field.label.toUpperCase()}`);
+      lines.push("-".repeat(40));
+      lines.push(content);
+      lines.push("");
+    });
+
+    try {
+      await navigator.clipboard.writeText(lines.join("\n"));
+      copyBtn.innerHTML = `<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Copiado`;
+      setTimeout(() => {
+        copyBtn.innerHTML = `<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg> Copiar`;
+      }, 2000);
+    } catch {
+      alert("No se pudo copiar. Selecciona el texto manualmente.");
+    }
+  });
+
+  // ── Reset ─────────────────────────────────────────────────────────────────
+  resetBtn.addEventListener("click", () => {
+    currentText = "";
+    currentQuestions = [];
+    clientText.value = "";
+    wordCount.textContent = "0 palabras";
+    wordCount.className = "word-count";
+    clearInputError();
+    briefCard.classList.add("hidden");
+    clarCard.classList.add("hidden");
+    inputCard.classList.remove("hidden");
+    setStep(1);
+    clientText.focus();
+  });
+
+  // ── Utils ─────────────────────────────────────────────────────────────────
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function renderMarkdownLight(str) {
+    // Minimal: **bold**, \n → <br>
+    return escapeHtml(str)
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\n/g, "<br>");
+  }
+</script>
+</body>
+</html>
