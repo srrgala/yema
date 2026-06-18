@@ -68,6 +68,7 @@ class ProcessResponse(BaseModel):
 
 
 @app.get("/api/health", tags=["Sistema"])
+@app.head("/api/health", include_in_schema=False)
 async def health():
     """Comprueba que el servicio está activo."""
     return {"status": "ok", "service": "brief-generator"}
