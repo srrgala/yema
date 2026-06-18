@@ -145,14 +145,17 @@ Los tests mockean la API de Anthropic; no requieren API key real.
 
 ---
 
-## Deploy en Koyeb
+## Deploy en Render
 
-1. Conecta el repo en [koyeb.com](https://koyeb.com) → New App → GitHub
-2. Koyeb detecta `koyeb.yaml` automáticamente
-3. Añade `ANTHROPIC_API_KEY` en el dashboard (Environment → Add variable)
-4. Deploy
+1. Sube el código a GitHub.
+2. En Render, crea un **Web Service** apuntando al repo.
+3. Configura:
+   - **Build command:** `pip install -r requirements.txt`
+   - **Start command:** `uvicorn api:app --host 0.0.0.0 --port $PORT`
+   - **Environment variable:** `ANTHROPIC_API_KEY` = tu clave
+4. Deploy. El frontend se sirve desde `/` junto con la API.
 
-URL de producción: [URL obtenida tras el deploy]
+URL de producción: https://brief-generator-5z0a.onrender.com
 
 ---
 
