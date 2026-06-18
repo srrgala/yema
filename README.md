@@ -59,7 +59,7 @@ Inputs vacíos, demasiado cortos (<20 palabras), consultas de precio o soporte t
 El sistema pregunta una vez (máximo 3 preguntas) y genera. No entra en bucles infinitos. Los campos que siguen sin información se marcan explícitamente en el brief.
 
 ### Haiku sobre modelos más potentes
-La tarea es extracción y estructuración, no razonamiento complejo. Haiku es 10× más rápido y barato para este caso de uso.
+La tarea es extracción y estructuración, no razonamiento complejo. Haiku es más rápido y barato para este caso de uso.
 
 ### El sistema nunca inventa
 Tres estados posibles para cada campo: proporcionado (desarrollado), inferido (marcado), ausente (declarado). Sin alucinaciones silenciosas.
@@ -74,7 +74,7 @@ Tres estados posibles para cada campo: proporcionado (desarrollado), inferido (m
 | Capa | Tecnología |
 |------|-----------|
 | Backend | FastAPI + Python 3.11+ |
-| LLM | Claude Haiku (Anthropic SDK) |
+| LLM | Claude Haiku (`claude-haiku-4-5-20251001`) |
 | Frontend | HTML / CSS / JS vanilla |
 | Servidor | Uvicorn |
 | Deploy | Render (Web Service) |
@@ -154,6 +154,72 @@ Los tests mockean la API de Anthropic; no requieren API key real.
    - **Start command:** `uvicorn api:app --host 0.0.0.0 --port $PORT`
    - **Environment variable:** `ANTHROPIC_API_KEY` = tu clave
 4. Deploy. El frontend se sirve desde `/` junto con la API.
+
+---
+
+## Endpoints
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/api/health` | Estado del servicio |
+| POST | `/api/process` | Procesar input y generar brief |
+
+### POST /api/process
+
+**Request — primera llamada:**
+```json
+{
+  "text": "Somos una startup de alimentación saludable..."
+}
+```
+
+**Request — segunda llamada (con respuestas de clarificación):**
+```json
+{
+  "text": "Somos una startup de alimentación saludable...",
+  "answers": [
+    {
+      "question": "¿Cuál es el resultado concreto que buscáis con este proyecto de branding?",
+      "answer": "Queremos entrar en el canal retail antes de Q3."
+    }
+  ]
+}
+```
+
+**Posibles valores de `status` en la respuesta:**
+
+| status | descripción |
+|--------|-------------|
+| `ready` | Brief generado — campo `brief` presente |
+| `needs_clarification` | Faltan campos críticos — campo `questions` presente |
+| `identity` | El input era una pregunta sobre el sistema — campo `message` presente |
+| `invalid` | Input vacío, demasiado corto o fuera de contexto — campo `message` presente |
+| `error` | Error interno o fallo de API — campo `message` presente |
+
+**Response — `needs_clarification`:**
+```json
+{
+  "status": "needs_clarification",
+  "questions": [
+    "¿Cuál es el resultado concreto que buscáis con este proyecto de branding?",
+    "¿A quién va dirigida vuestra marca?",
+    "¿Cuáles son vuestros competidores directos?"
+  ]
+}
+```
+
+**Response — `ready`:**
+```json
+{
+  "status": "ready",
+  "brief": {
+    "context": "...",
+    "objectives": "...",
+    "target_audience": "...",
+    "...": "..."
+  }
+}
+```
 
 ---
 
