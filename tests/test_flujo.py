@@ -47,21 +47,30 @@ def _make_extraction(**overrides) -> dict:
     return base
 
 
-class _FakeContentBlock:
-    """Minimal stand-in for anthropic.types.ContentBlock."""
-    def __init__(self, text: str):
-        self.text = text
+class _FakeToolUseBlock:
+    """Stand-in for a tool_use content block returned by the Anthropic SDK."""
+    def __init__(self, name: str, input_data: dict):
+        self.type = "tool_use"
+        self.name = name
+        self.input = input_data
 
 
 class _FakeResponse:
-    """Minimal stand-in for anthropic.types.Message."""
-    def __init__(self, text: str):
-        self.content = [_FakeContentBlock(text)]
+    """Stand-in for anthropic.types.Message with a single tool_use block."""
+    def __init__(self, tool_name: str, input_data: dict):
+        self.content = [_FakeToolUseBlock(tool_name, input_data)]
 
 
-def _make_anthropic_response(content: str) -> "_FakeResponse":
-    """Return a fake Anthropic response with the given text content."""
-    return _FakeResponse(content)
+def _make_extraction_response(fields: dict) -> "_FakeResponse":
+    return _FakeResponse("extract_brief_fields", fields)
+
+
+def _make_questions_response(questions: list[str]) -> "_FakeResponse":
+    return _FakeResponse("generate_clarification_questions", {"questions": questions})
+
+
+def _make_brief_response(fields: dict) -> "_FakeResponse":
+    return _FakeResponse("generate_brief", fields)
 
 
 # ── Classifier tests ──────────────────────────────────────────────────────────
@@ -279,3 +288,229 @@ class TestProcessInput:
 
         assert result["status"] == "ready"
         assert "brief" in result
+
+
+# ── Core module unit tests (tool_use responses) ───────────────────────────────
+
+class TestExtractFields:
+    """Unit tests for core.extractor.extract_fields — mocks the Anthropic client."""
+
+    @pytest.mark.asyncio
+    async def test_returns_extracted_fields(self):
+        from core.extractor import extract_fields
+
+        fake_input = {
+            "context": "Empresa de consultoría fundada en 2010.",
+            "mission_vision_values": None,
+            "objectives": "Aumentar reconocimiento de marca un 30%.",
+            "target_audience": "Directores financieros de pymes.",
+            "competition": None,
+            "brand_personality": None,
+            "promise": None,
+            "logistics": None,
+        }
+
+        with patch("core.extractor.anthropic.AsyncAnthropic") as mock_cls:
+            mock_client = MagicMock()
+            mock_client.messages.create = AsyncMock(
+                return_value=_make_extraction_response(fake_input)
+            )
+            mock_cls.return_value = mock_client
+
+            result = await extract_fields(VALID_TEXT)
+
+        assert result["context"] == "Empresa de consultoría fundada en 2010."
+        assert result["objectives"] == "Aumentar reconocimiento de marca un 30%."
+        assert result["mission_vision_values"] is None
+        assert result["competition"] is None
+
+    @pytest.mark.asyncio
+    async def test_blank_string_normalised_to_none(self):
+        from core.extractor import extract_fields
+
+        fake_input = {
+            "context": "   ",
+            "mission_vision_values": None,
+            "objectives": None,
+            "target_audience": None,
+            "competition": None,
+            "brand_personality": None,
+            "promise": None,
+            "logistics": None,
+        }
+
+        with patch("core.extractor.anthropic.AsyncAnthropic") as mock_cls:
+            mock_client = MagicMock()
+            mock_client.messages.create = AsyncMock(
+                return_value=_make_extraction_response(fake_input)
+            )
+            mock_cls.return_value = mock_client
+
+            result = await extract_fields(VALID_TEXT)
+
+        assert result["context"] is None
+
+    @pytest.mark.asyncio
+    async def test_all_fields_present_in_result(self):
+        from core.extractor import extract_fields
+        from config import BRIEF_FIELDS
+
+        fake_input = {field: None for field in BRIEF_FIELDS}
+
+        with patch("core.extractor.anthropic.AsyncAnthropic") as mock_cls:
+            mock_client = MagicMock()
+            mock_client.messages.create = AsyncMock(
+                return_value=_make_extraction_response(fake_input)
+            )
+            mock_cls.return_value = mock_client
+
+            result = await extract_fields(VALID_TEXT)
+
+        assert set(result.keys()) == set(BRIEF_FIELDS.keys())
+
+
+class TestGenerateQuestions:
+    """Unit tests for core.clarifier.generate_questions — mocks the Anthropic client."""
+
+    @pytest.mark.asyncio
+    async def test_returns_question_list(self):
+        from core.clarifier import generate_questions
+
+        expected = [
+            "¿Cuál es la historia de tu empresa?",
+            "¿Qué resultado concreto buscáis con este proyecto?",
+            "¿A quién va dirigida vuestra marca?",
+        ]
+
+        with patch("core.clarifier.anthropic.AsyncAnthropic") as mock_cls:
+            mock_client = MagicMock()
+            mock_client.messages.create = AsyncMock(
+                return_value=_make_questions_response(expected)
+            )
+            mock_cls.return_value = mock_client
+
+            result = await generate_questions(
+                VALID_TEXT,
+                extraction={},
+                missing_critical_fields=["context", "objectives", "target_audience"],
+            )
+
+        assert result == expected
+
+    @pytest.mark.asyncio
+    async def test_caps_at_max_questions(self):
+        from core.clarifier import generate_questions
+        from config import MAX_QUESTIONS_PER_ROUND
+
+        too_many = [f"Pregunta {i}" for i in range(MAX_QUESTIONS_PER_ROUND + 2)]
+
+        with patch("core.clarifier.anthropic.AsyncAnthropic") as mock_cls:
+            mock_client = MagicMock()
+            mock_client.messages.create = AsyncMock(
+                return_value=_make_questions_response(too_many)
+            )
+            mock_cls.return_value = mock_client
+
+            result = await generate_questions(
+                VALID_TEXT,
+                extraction={},
+                missing_critical_fields=["context"],
+            )
+
+        assert len(result) == MAX_QUESTIONS_PER_ROUND
+
+    @pytest.mark.asyncio
+    async def test_filters_non_string_entries(self):
+        from core.clarifier import generate_questions
+
+        mixed = ["Pregunta válida", 42, None, "Otra pregunta válida"]
+
+        with patch("core.clarifier.anthropic.AsyncAnthropic") as mock_cls:
+            mock_client = MagicMock()
+            mock_client.messages.create = AsyncMock(
+                return_value=_make_questions_response(mixed)  # type: ignore[arg-type]
+            )
+            mock_cls.return_value = mock_client
+
+            result = await generate_questions(
+                VALID_TEXT,
+                extraction={},
+                missing_critical_fields=["context"],
+            )
+
+        assert all(isinstance(q, str) for q in result)
+
+
+class TestGenerateBrief:
+    """Unit tests for core.generator.generate_brief — mocks the Anthropic client."""
+
+    @pytest.mark.asyncio
+    async def test_returns_all_brief_fields(self):
+        from core.generator import generate_brief
+        from config import BRIEF_FIELDS
+
+        fake_brief = {field: f"Contenido de {field}." for field in BRIEF_FIELDS}
+
+        with patch("core.generator.anthropic.AsyncAnthropic") as mock_cls:
+            mock_client = MagicMock()
+            mock_client.messages.create = AsyncMock(
+                return_value=_make_brief_response(fake_brief)
+            )
+            mock_cls.return_value = mock_client
+
+            result = await generate_brief(VALID_TEXT, answers=[])
+
+        assert set(result.keys()) == set(BRIEF_FIELDS.keys())
+        assert result["context"] == "Contenido de context."
+
+    @pytest.mark.asyncio
+    async def test_missing_field_defaults_to_no_proporcionado(self):
+        from core.generator import generate_brief
+
+        # LLM omits 'competition' field
+        fake_brief = {
+            "context": "Empresa de consultoría fundada en 2010.",
+            "mission_vision_values": "(inferido — pendiente de validación)",
+            "objectives": "Aumentar reconocimiento.",
+            "target_audience": "Pymes industriales.",
+            # 'competition' absent
+            "brand_personality": "Cercano y experto.",
+            "promise": "Claridad financiera.",
+            "logistics": "(no proporcionado)",
+        }
+
+        with patch("core.generator.anthropic.AsyncAnthropic") as mock_cls:
+            mock_client = MagicMock()
+            mock_client.messages.create = AsyncMock(
+                return_value=_make_brief_response(fake_brief)
+            )
+            mock_cls.return_value = mock_client
+
+            result = await generate_brief(VALID_TEXT, answers=[])
+
+        assert result["competition"] == "(no proporcionado)"
+
+    @pytest.mark.asyncio
+    async def test_clarification_answers_forwarded_in_prompt(self):
+        """Verify the API is called (answers don't silently disappear)."""
+        from core.generator import generate_brief
+        from config import BRIEF_FIELDS
+
+        fake_brief = {field: "contenido" for field in BRIEF_FIELDS}
+        answers = [
+            {"question": "¿A quién os dirigís?", "answer": "Pymes del sector industrial."},
+        ]
+
+        with patch("core.generator.anthropic.AsyncAnthropic") as mock_cls:
+            mock_client = MagicMock()
+            mock_client.messages.create = AsyncMock(
+                return_value=_make_brief_response(fake_brief)
+            )
+            mock_cls.return_value = mock_client
+
+            await generate_brief(VALID_TEXT, answers=answers)
+
+            call_kwargs = mock_client.messages.create.call_args.kwargs
+            user_content = call_kwargs["messages"][0]["content"]
+
+        assert "Pymes del sector industrial." in user_content

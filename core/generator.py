@@ -3,10 +3,58 @@ Fase 3 — Generación del brief.
 Produce el brief estructurado a partir de toda la información disponible.
 """
 
-import json
 import anthropic
 
 from config import MODEL, BRIEF_FIELDS, load_system_prompt
+
+# Cargado una vez al arranque del módulo, no en cada request.
+_SYSTEM_PROMPT: str = load_system_prompt()
+
+_GENERATION_TOOL = {
+    "name": "generate_brief",
+    "description": "Genera el brief de branding estructurado con los 8 campos desarrollados.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "context": {
+                "type": "string",
+                "description": "Contexto y antecedentes: historia, situación actual, motivación del proyecto.",
+            },
+            "mission_vision_values": {
+                "type": "string",
+                "description": "Misión, visión y valores de la empresa.",
+            },
+            "objectives": {
+                "type": "string",
+                "description": "Objetivos concretos y medibles del proyecto de branding.",
+            },
+            "target_audience": {
+                "type": "string",
+                "description": "Público objetivo: demografía, psicografía, comportamientos.",
+            },
+            "competition": {
+                "type": "string",
+                "description": "Análisis de competidores directos e indirectos, posicionamiento relativo.",
+            },
+            "brand_personality": {
+                "type": "string",
+                "description": "Personalidad de la marca: adjetivos, arquetipos, tono, referencias.",
+            },
+            "promise": {
+                "type": "string",
+                "description": "Promesa de la marca y beneficio diferencial principal.",
+            },
+            "logistics": {
+                "type": "string",
+                "description": "Restricciones y requisitos logísticos: presupuesto, plazos, formatos.",
+            },
+        },
+        "required": [
+            "context", "mission_vision_values", "objectives", "target_audience",
+            "competition", "brand_personality", "promise", "logistics",
+        ],
+    },
+}
 
 _GENERATION_PROMPT = """\
 Genera un brief de branding completo y profesional basándote en \
@@ -25,20 +73,7 @@ desarróllala y añade al final "(inferido — pendiente de validación)".
 - Información completamente ausente → escribe únicamente "(no proporcionado)".
 
 No repitas verbatim el texto del cliente; transfórmalo en lenguaje \
-estratégico profesional. No añadas secciones ni campos extra.
-
-Devuelve ÚNICAMENTE JSON válido con esta estructura exacta \
-(sin bloques de código, sin explicaciones):
-{{
-  "context": "contenido",
-  "mission_vision_values": "contenido",
-  "objectives": "contenido",
-  "target_audience": "contenido",
-  "competition": "contenido",
-  "brand_personality": "contenido",
-  "promise": "contenido",
-  "logistics": "contenido"
-}}\
+estratégico profesional. No añadas secciones ni campos extra.\
 """
 
 _CLARIFICATIONS_TEMPLATE = """\
@@ -66,15 +101,6 @@ def _format_clarifications(answers: list[dict]) -> str:
     return _CLARIFICATIONS_TEMPLATE.format(qa_block="\n".join(lines).rstrip())
 
 
-def _clean_json(raw: str) -> str:
-    raw = raw.strip()
-    if raw.startswith("```"):
-        lines = raw.split("\n")
-        inner = lines[1:-1] if lines[-1].strip() == "```" else lines[1:]
-        raw = "\n".join(inner).strip()
-    return raw
-
-
 async def generate_brief(original_text: str, answers: list[dict]) -> dict:
     """
     Phase 3: Generate the structured branding brief.
@@ -87,7 +113,6 @@ async def generate_brief(original_text: str, answers: list[dict]) -> dict:
         Dict mapping field keys to developed content strings.
     """
     client = anthropic.AsyncAnthropic()
-    system = load_system_prompt()
 
     prompt = _GENERATION_PROMPT.format(
         original_text=original_text,
@@ -96,13 +121,15 @@ async def generate_brief(original_text: str, answers: list[dict]) -> dict:
 
     response = await client.messages.create(
         model=MODEL,
-        max_tokens=3000,
-        system=system,
+        max_tokens=2500,
+        system=[{"type": "text", "text": _SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],
+        tools=[_GENERATION_TOOL],
+        tool_choice={"type": "tool", "name": "generate_brief"},
         messages=[{"role": "user", "content": prompt}],
     )
 
-    raw = _clean_json(response.content[0].text)
-    data = json.loads(raw)
+    tool_block = next(b for b in response.content if b.type == "tool_use")
+    data = tool_block.input  # dict Python ya parseado — sin json.loads(), sin _clean_json()
 
     result: dict = {}
     for field in BRIEF_FIELDS:

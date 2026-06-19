@@ -3,10 +3,31 @@ Fase 2 — Clarificación activa.
 Genera preguntas específicas para los campos críticos ausentes.
 """
 
-import json
 import anthropic
 
 from config import MODEL, BRIEF_FIELDS, MAX_QUESTIONS_PER_ROUND, load_system_prompt
+
+# Cargado una vez al arranque del módulo, no en cada request.
+_SYSTEM_PROMPT: str = load_system_prompt()
+
+_CLARIFICATION_TOOL = {
+    "name": "generate_clarification_questions",
+    "description": "Genera preguntas de clarificación para los campos críticos ausentes en el brief.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "questions": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": (
+                    f"Lista de preguntas (máximo {MAX_QUESTIONS_PER_ROUND}). "
+                    "Cada una directa, accionable, apuntando a un único dato."
+                ),
+            }
+        },
+        "required": ["questions"],
+    },
+}
 
 _CLARIFICATION_PROMPT = """\
 El texto del cliente está incompleto. Faltan datos en campos críticos \
@@ -27,21 +48,8 @@ responda en 1-3 frases.
 TEXTO ORIGINAL DEL CLIENTE:
 ---
 {text}
----
-
-Devuelve ÚNICAMENTE un array JSON de strings \
-(sin bloques de código, sin explicaciones):
-["pregunta 1", "pregunta 2"]\
+---\
 """
-
-
-def _clean_json(raw: str) -> str:
-    raw = raw.strip()
-    if raw.startswith("```"):
-        lines = raw.split("\n")
-        inner = lines[1:-1] if lines[-1].strip() == "```" else lines[1:]
-        raw = "\n".join(inner).strip()
-    return raw
 
 
 async def generate_questions(
@@ -54,7 +62,6 @@ async def generate_questions(
         List of question strings (max MAX_QUESTIONS_PER_ROUND).
     """
     client = anthropic.AsyncAnthropic()
-    system = load_system_prompt()
 
     missing_lines = []
     for field in missing_critical_fields:
@@ -70,15 +77,13 @@ async def generate_questions(
     response = await client.messages.create(
         model=MODEL,
         max_tokens=512,
-        system=system,
+        system=[{"type": "text", "text": _SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],
+        tools=[_CLARIFICATION_TOOL],
+        tool_choice={"type": "tool", "name": "generate_clarification_questions"},
         messages=[{"role": "user", "content": prompt}],
     )
 
-    raw = _clean_json(response.content[0].text)
-    questions = json.loads(raw)
+    tool_block = next(b for b in response.content if b.type == "tool_use")
+    questions = tool_block.input.get("questions", [])
 
-    if not isinstance(questions, list):
-        questions = []
-
-    # Keep only string entries, cap at max
     return [q for q in questions if isinstance(q, str)][:MAX_QUESTIONS_PER_ROUND]
