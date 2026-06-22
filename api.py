@@ -11,13 +11,21 @@ Producción (Render):
 import logging
 import os
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from main import process_input
+
+# ---------------------------------------------------------------------------
+# Rate limiter
+# ---------------------------------------------------------------------------
+limiter = Limiter(key_func=get_remote_address)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -32,11 +40,18 @@ app = FastAPI(
     redoc_url=None,
     openapi_url=None,
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS — restrictivo por defecto; ampliar en producción si se necesita
+_ALLOWED_ORIGINS = [
+    "https://brief-generator-5z0a.onrender.com",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("ALLOWED_ORIGINS", "*").split(","),
+    allow_origins=_ALLOWED_ORIGINS,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
@@ -46,12 +61,12 @@ app.add_middleware(
 
 
 class AnswerItem(BaseModel):
-    question: str = Field(..., description="Pregunta formulada por el sistema")
-    answer: str = Field(..., description="Respuesta del usuario")
+    question: str = Field(..., max_length=500, description="Pregunta formulada por el sistema")
+    answer: str = Field(..., max_length=1000, description="Respuesta del usuario")
 
 
 class ProcessRequest(BaseModel):
-    text: str = Field(..., description="Texto libre del cliente")
+    text: str = Field(..., min_length=1, max_length=5000, description="Texto libre del cliente")
     answers: list[AnswerItem] | None = Field(
         default=None,
         description="Respuestas a las preguntas de clarificación (segunda llamada)",
@@ -76,21 +91,22 @@ async def health():
 
 
 @app.post("/api/process", response_model=ProcessResponse, tags=["Brief"])
-async def process(request: ProcessRequest):
+@limiter.limit("10/minute")
+async def process(request: Request, body: ProcessRequest):
     """
     Punto de entrada principal del generador.
 
     - **Primera llamada**: envía solo `text`.
     - **Segunda llamada**: envía `text` + `answers` con las respuestas a las preguntas.
     """
-    if not request.text or not request.text.strip():
+    if not body.text or not body.text.strip():
         raise HTTPException(status_code=422, detail="El campo 'text' no puede estar vacío.")
 
     answers_dicts = (
-        [item.model_dump() for item in request.answers] if request.answers else []
+        [item.model_dump() for item in body.answers] if body.answers else []
     )
 
-    result = await process_input(text=request.text.strip(), answers=answers_dicts)
+    result = await process_input(text=body.text.strip(), answers=answers_dicts)
     return result
 
 
