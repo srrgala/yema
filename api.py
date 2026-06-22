@@ -28,8 +28,9 @@ app = FastAPI(
     title="Brief Generator",
     description="Convierte textos desordenados de clientes en briefs de branding estructurados.",
     version="1.0.0",
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
 )
 
 # CORS — restrictivo por defecto; ampliar en producción si se necesita
