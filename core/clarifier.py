@@ -3,6 +3,8 @@ Fase 2 — Clarificación activa.
 Genera preguntas específicas para los campos críticos ausentes.
 """
 
+import json
+
 import anthropic
 
 from config import MODEL, BRIEF_FIELDS, MAX_QUESTIONS_PER_ROUND, load_system_prompt
@@ -82,6 +84,13 @@ async def generate_questions(
         tool_choice={"type": "tool", "name": "generate_clarification_questions"},
         messages=[{"role": "user", "content": prompt}],
     )
+    print(json.dumps({
+        "proyecto": "yema",
+        "input_tokens": response.usage.input_tokens,
+        "output_tokens": response.usage.output_tokens,
+        "cache_creation_input_tokens": getattr(response.usage, "cache_creation_input_tokens", 0),
+        "cache_read_input_tokens": getattr(response.usage, "cache_read_input_tokens", 0),
+    }))
 
     tool_block = next(b for b in response.content if b.type == "tool_use")
     questions = tool_block.input.get("questions", [])

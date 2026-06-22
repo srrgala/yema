@@ -3,6 +3,8 @@ Fase 1 — Extracción.
 Mapea el texto libre del cliente a los 8 campos del brief.
 """
 
+import json
+
 import anthropic
 
 from config import MODEL, BRIEF_FIELDS, CRITICAL_FIELDS, load_system_prompt
@@ -90,6 +92,13 @@ async def extract_fields(text: str) -> dict:
         tool_choice={"type": "tool", "name": "extract_brief_fields"},
         messages=[{"role": "user", "content": _EXTRACTION_PROMPT.format(text=text)}],
     )
+    print(json.dumps({
+        "proyecto": "yema",
+        "input_tokens": response.usage.input_tokens,
+        "output_tokens": response.usage.output_tokens,
+        "cache_creation_input_tokens": getattr(response.usage, "cache_creation_input_tokens", 0),
+        "cache_read_input_tokens": getattr(response.usage, "cache_read_input_tokens", 0),
+    }))
 
     tool_block = next(b for b in response.content if b.type == "tool_use")
     data = tool_block.input  # dict Python ya parseado — sin json.loads(), sin _clean_json()

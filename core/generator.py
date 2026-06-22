@@ -3,6 +3,8 @@ Fase 3 — Generación del brief.
 Produce el brief estructurado a partir de toda la información disponible.
 """
 
+import json
+
 import anthropic
 
 from config import MODEL, BRIEF_FIELDS, load_system_prompt
@@ -127,6 +129,13 @@ async def generate_brief(original_text: str, answers: list[dict]) -> dict:
         tool_choice={"type": "tool", "name": "generate_brief"},
         messages=[{"role": "user", "content": prompt}],
     )
+    print(json.dumps({
+        "proyecto": "yema",
+        "input_tokens": response.usage.input_tokens,
+        "output_tokens": response.usage.output_tokens,
+        "cache_creation_input_tokens": getattr(response.usage, "cache_creation_input_tokens", 0),
+        "cache_read_input_tokens": getattr(response.usage, "cache_read_input_tokens", 0),
+    }))
 
     tool_block = next(b for b in response.content if b.type == "tool_use")
     data = tool_block.input  # dict Python ya parseado — sin json.loads(), sin _clean_json()
