@@ -604,7 +604,12 @@
 
   /* ── Helpers de notice ──────────────────────────────────────────── */
   function showNotice(msg, type = "error") {
-    inputNotice.innerHTML = msg;
+    inputNotice.textContent = msg;
+    inputNotice.className = `notice notice-${type}`;
+  }
+
+  function showNoticeHtml(html, type = "error") {
+    inputNotice.innerHTML = html;
     inputNotice.className = `notice notice-${type}`;
   }
 
@@ -646,12 +651,12 @@
 
       case "invalid":
         showState("input");
-        showNotice(escapeHtml(data.message || "Input inválido."));
+        showNotice(data.message || "Input inválido.");
         break;
 
       case "identity":
         showState("input");
-        showNotice(renderMarkdownLight(data.message || ""), "info");
+        showNoticeHtml(renderMarkdownLight(data.message || ""), "info");
         break;
 
       case "needs_clarification":
@@ -667,7 +672,7 @@
 
       case "error":
         showState("input");
-        showNotice(escapeHtml(data.message || "Error interno del servidor."));
+        showNotice(data.message || "Error interno del servidor.");
         break;
 
       default:
