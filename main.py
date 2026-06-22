@@ -89,7 +89,7 @@ async def process_input(text: str, answers: list[dict] | None = None) -> dict:
         logger.exception("Authentication error calling Anthropic API")
         return {
             "status": "error",
-            "message": "Error de autenticación con la API. Verifica que ANTHROPIC_API_KEY esté configurada correctamente.",
+            "message": "Error de autenticación con el servicio de IA. Inténtalo de nuevo o contacta con soporte.",
         }
     except (json.JSONDecodeError, KeyError, ValueError) as exc:
         logger.exception("Parsing error in LLM response: %s", exc)
